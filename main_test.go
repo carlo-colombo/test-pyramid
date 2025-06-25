@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"net/http"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -22,7 +23,7 @@ func Test_myservice(t *testing.T) {
 		assert.Eventually(t, func() bool {
 			output := session.Err.Contents()
 			return strings.Contains(string(output), "Starting server on :8080")
-		}, 10*time.Second, 10*time.Millisecond, "server did not start in time")
+		}, 2*time.Second, 10*time.Millisecond, "server did not start in time")
 	})
 
 	t.Run("answers to the health endpoint", func(t *testing.T) {
@@ -42,6 +43,29 @@ func Test_myservice(t *testing.T) {
 				return false
 			}
 		}, 2*time.Second, 10*time.Millisecond, "process did not exit in time after interrupt")
+	})
+
+	t.Run("fails to start if port is busy", func(t *testing.T) {
+		// Start a dummy listener on port 8080
+		ln, err := net.Listen("tcp", ":8080")
+		require.NoError(t, err, "could not listen on port 8080 for test setup")
+		defer ln.Close()
+
+		// Attempt to start the service using buildAndRun
+		session, cleanup := buildAndRun(t)
+		defer cleanup()
+
+		// The process should exit quickly with an error about the port
+		assert.Eventually(t, func() bool {
+			select {
+			case <-session.Exited:
+				return session.ExitCode() != 0
+			default:
+				return false
+			}
+		}, 2*time.Second, 10*time.Millisecond, "service did not exit as expected when port is busy")
+		output := string(session.Err.Contents()) + string(session.Out.Contents())
+		assert.Contains(t, output, "address already in use", "expected error about port being busy")
 	})
 }
 
