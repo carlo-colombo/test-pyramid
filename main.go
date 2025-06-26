@@ -24,19 +24,14 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/health", healthHandler)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	addr := ":" + port
-	server := &http.Server{Addr: addr}
+	server := &http.Server{Addr: ":8080"}
 
 	// Channel to listen for interrupt or terminate signals
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Starting server on %s", addr)
+		log.Println("Starting server on :8080")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("ListenAndServe(): %s", err)
 		}
