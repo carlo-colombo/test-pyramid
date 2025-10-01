@@ -1,11 +1,10 @@
 package main_test
 
 import (
-	"net/http"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,15 +18,14 @@ func Test_myservice(t *testing.T) {
 	var session, cleanup = buildAndRun(t)
 	defer cleanup()
 
-	t.Run("is started and listening on port 8080", func(t *testing.T) {
-		assert.Eventually(t, func() bool {
-			output := session.Err.Contents()
-			return strings.Contains(string(output), "Starting server on :8080")
-		}, 2*time.Second, 10*time.Millisecond, "server did not start in time")
-	})
-
 	t.Run("answers to the health endpoint", func(t *testing.T) {
-		resp, err := http.Get("http://localhost:8080/health")
+		var resp *http.Response
+		var err error
+
+		assert.Eventually(t, func() bool {
+			resp, err = http.Get("http://localhost:8080/health")
+			return err == nil
+		}, 2*time.Second, 10*time.Millisecond, "service did not start in time")
 
 		assert.NoError(t, err, "cannot perform request")
 		assert.Equal(t, 200, resp.StatusCode, "expected 200 status code")
