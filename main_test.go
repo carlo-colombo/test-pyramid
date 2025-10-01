@@ -19,16 +19,12 @@ func Test_myservice(t *testing.T) {
 	defer cleanup()
 
 	t.Run("answers to the health endpoint", func(t *testing.T) {
-		var resp *http.Response
-		var err error
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			resp, err := http.Get("http://localhost:8080/health")
 
-		assert.Eventually(t, func() bool {
-			resp, err = http.Get("http://localhost:8080/health")
-			return err == nil
+			require.NoError(c, err, "cannot perform request")
+			require.Equal(c, 200, resp.StatusCode, "expected 200 status code")
 		}, 2*time.Second, 10*time.Millisecond, "service did not start in time")
-
-		assert.NoError(t, err, "cannot perform request")
-		assert.Equal(t, 200, resp.StatusCode, "expected 200 status code")
 	})
 
 	t.Run("shuts down with interrupt signal", func(t *testing.T) {
